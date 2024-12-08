@@ -250,23 +250,6 @@ HOSTOS := $(shell uname -s | tr '[:upper:]' '[:lower:]' | \
 
 export	HOSTARCH HOSTOS
 
-
-defconfig = ./configs/$(MAKECMDGOALS)
-
-defconfig_check=$(shell if [ -f $(defconfig) ]; then echo yes; else echo no; fi;)
-config_check=$(shell if [ -f .config ]; then echo yes; else echo no; fi;)
-ifeq (x$(defconfig_check), xyes)
-	CONFIG_ARM=$(shell cat $(defconfig) | grep -w "CONFIG_ARM" | awk -F= '{printf $$2}')
-	CONFIG_RISCV=$(shell cat $(defconfig) | grep -w "CONFIG_RISCV" | awk -F= '{printf $$2}')
-	CONFIG_ARCH_RV32I=$(shell cat $(defconfig) | grep -w "CONFIG_ARCH_RV32I" | awk -F= '{printf $$2}')
-else
-ifeq (x$(config_check), xyes)
-	CONFIG_ARM=$(shell cat .config | grep -w "CONFIG_ARM" | awk -F= '{printf $$2}')
-	CONFIG_RISCV=$(shell cat .config | grep -w "CONFIG_RISCV" | awk -F= '{printf $$2}')
-	CONFIG_ARCH_RV32I=$(shell cat .config | grep -w "CONFIG_ARCH_RV32I" | awk -F= '{printf $$2}')
-endif
-endif
-
 # set default to nothing for native builds
 ifeq ($(HOSTARCH),$(ARCH))
 CROSS_COMPILE ?=
@@ -400,11 +383,10 @@ KBUILD_CPPFLAGS := -D__KERNEL__ -D__UBOOT__
 KBUILD_CFLAGS   := -Wall -Wstrict-prototypes \
 		   -Wno-format-security \
 		   -fno-builtin -ffreestanding $(CSTD_FLAG) \
-		   -Werror
-ifeq (x$(CONFIG_ARCH_RV32I), xy)
+		   -Wno-array-parameter -Wno-attributes
+
 KBUILD_CFLAGS	+= -Wno-error=address-of-packed-member
 KBUILD_CFLAGS	+= -Wno-address-of-packed-member
-endif
 KBUILD_CFLAGS	+= -fshort-wchar
 KBUILD_AFLAGS   := -D__ASSEMBLY__
 
@@ -1444,10 +1426,6 @@ u-boot:	$(u-boot-init) $(u-boot-main) u-boot.lds FORCE
 ifeq ($(CONFIG_KALLSYMS),y)
 	$(call cmd,smap)
 	$(call cmd,u-boot__) common/system_map.o
-endif
-
-ifeq ($(CONFIG_RISCV),y)
-	@tools/prelink-riscv $@ 0
 endif
 
 quiet_cmd_sym ?= SYM     $@
